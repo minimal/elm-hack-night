@@ -9,7 +9,7 @@ import Http
 import Json.Decode as Json exposing ((:=))
 import Task
 import Signal exposing (message,forwardTo,Address)
-
+import List
 
 
 -- MODEL
@@ -20,11 +20,16 @@ type alias Model =
     , answers : List Answer
     }
 
-
 type alias Answer =
     { name : String
+    , images : List Image
     }
 
+type alias Image =
+  { height : Int
+  , width : Int
+  , url : String
+  }
 
 init : (Model, Effects Action)
 init =
@@ -114,18 +119,22 @@ resultsList address model =
   in
     row (List.map toEntry model.answers)
 
-
 resultView : Answer -> Html
 resultView answer =
-  div [class "panel panel-info"]
-      [ div
-          [class "panel-heading"]
-          [text "Album"]
-      , div
-          [ class "panel-body"
-          , style [("height", "10rem")]
-          ]
-          [text answer.name]
+  let
+    imgmaybe = List.head answer.images
+    imgsrc = Maybe.withDefault ""  (Maybe.map .url imgmaybe)
+  in
+    div [class "panel panel-info"]
+          [ div
+            [class "panel-heading"]
+            [text "Album"]
+          , div
+            [ class "panel-body"
+            -- , style [("height", "10rem")]
+            ]
+            [h3 []  [text answer.name]
+            , img [src imgsrc, style [("width", "100%")]] []]
       ]
 
 
@@ -155,7 +164,13 @@ searchUrl query =
 decodeAnswers : Json.Decoder (List Answer)
 decodeAnswers =
   let
-    albumName =
-      Json.map Answer ("name" := Json.string)
+    albumImage = Json.object3 Image
+                 ("height" := Json.int)
+                 ("width" := Json.int)
+                 ("url" := Json.string)
+    album = Json.object2 Answer
+            ("name" := Json.string)
+            ("images" := Json.list albumImage)
+
   in
-    (Json.at ["albums", "items"] (Json.list albumName))
+    (Json.at ["albums", "items"] (Json.list album))
